@@ -1,9 +1,13 @@
 package main
 
 import (
-	"fmt"
+	"os"
+
+	"github.com/liampulles/juryrig/internal/wire"
 )
 
 func main() {
-	fmt.Println("Hello World!")
+	// Delegate functionality to Run, do the difficult-to-test
+	// bits here.
+	os.Exit(wire.Run(os.Args, os.Environ()))
 }

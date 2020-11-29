@@ -10,7 +10,6 @@ build:
 	go build ./...
 install: build
 	go install ./...
-	rm juryrig
 inspect: build
 	golint ./...
 update:
@@ -18,5 +17,4 @@ update:
 pre-commit: update clean coverage.txt inspect
 	go mod tidy
 clean:
-	rm -f juryrig
 	rm -f coverage.txt

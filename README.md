@@ -77,12 +77,16 @@ type InternalUserFilm struct {
 We can describe a mapper as follows:
 
 ```go
+package film
+
 //go:generate juryrig gen -o zz.mapper.impl.go
+
+// +juryrig:mapper:MapperImpl
 type Mapper interface {
     // +juryrig:link:ef.title->title
     // +juryrig:link:ef.runtime->runtime
     // +juryrig:ignore:director
-    // +juryrig:func:ToInternalUser(eu)->user
+    // +juryrig:linkfunc:ToInternalUser(eu)->user
     ToInternalUserFilm(ef ExternalFilm, eu ExternalUser) InternalUserFilm
     // +juryrig:link:username->username
     ToInternalUser(eu ExternalUser) InternalUser

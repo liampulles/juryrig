@@ -1,22 +1,21 @@
-package wire
+package command
 
 import (
 	"strings"
 
-	"github.com/liampulles/juryrig/internal/gen"
-
-	"github.com/liampulles/juryrig/internal/config"
+	"github.com/liampulles/juryrig/internal/wire"
 )
 
 var commandRegistry map[string]Command = map[string]Command{
-	"gen": gen.Command,
+	"gen": Gen,
 }
 
 // Command defines a method which takes arguments and environment config,
 // does something, and returns nil if successful, otherwise an error.
-type Command func(args []string, cfg *config.Config) error
+type Command func(args []string, wiring *wire.Wiring) error
 
-func determineCommand(arg string) *Command {
+// Determine resolves an arg to a Command, if present
+func Determine(arg string) *Command {
 	cmd, ok := commandRegistry[arg]
 	if !ok {
 		return nil
@@ -24,7 +23,8 @@ func determineCommand(arg string) *Command {
 	return &cmd
 }
 
-func availableCommands() string {
+// Available returns a readable string of registered commands.
+func Available() string {
 	var cmdNames []string
 	for k := range commandRegistry {
 		cmdNames = append(cmdNames, k)

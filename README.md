@@ -86,7 +86,7 @@ type Mapper interface {
     // +juryrig:link:ef.title->title
     // +juryrig:link:ef.runtime->runtime
     // +juryrig:ignore:director
-    // +juryrig:linkfunc:ToInternalUser(eu)->user
+    // +juryrig:linkfunc:eu->ToInternalUser->user
     ToInternalUserFilm(ef ExternalFilm, eu ExternalUser) InternalUserFilm
     // +juryrig:link:username->username
     ToInternalUser(eu ExternalUser) InternalUser

@@ -3,6 +3,8 @@ package command
 import (
 	"fmt"
 	"strings"
+
+	"github.com/liampulles/juryrig/internal/config"
 )
 
 // Command runs commands
@@ -61,17 +63,26 @@ func (m *Manager) findCommand(name string) Command {
 }
 
 // Gen implements command to generate go files
-type Gen struct{}
+type Gen struct {
+	cfgService config.Service
+}
 
 var _ Command = &Gen{}
 
 // NewGen is a constructor
-func NewGen() *Gen {
-	return &Gen{}
+func NewGen(cfgService config.Service) *Gen {
+	return &Gen{
+		cfgService: cfgService,
+	}
 }
 
 // Run runs gen
 func (g *Gen) Run(args []string) error {
-	fmt.Println("Hello world")
+	cfg, err := g.cfgService.Read()
+	if err != nil {
+		return fmt.Errorf("could not fetch config: %w", err)
+	}
+
+	fmt.Printf("Hello world\n%+v\n", cfg)
 	return nil
 }

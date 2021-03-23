@@ -1,33 +1,77 @@
 package command
 
 import (
+	"fmt"
 	"strings"
-
-	"github.com/liampulles/juryrig/internal/wire"
 )
 
-var commandRegistry map[string]Command = map[string]Command{
-	"gen": Gen,
+// Command runs commands
+type Command interface {
+	Run(args []string) error
 }
 
-// Command defines a method which takes arguments and environment config,
-// does something, and returns nil if successful, otherwise an error.
-type Command func(args []string, wiring *wire.Wiring) error
-
-// Determine resolves an arg to a Command, if present
-func Determine(arg string) *Command {
-	cmd, ok := commandRegistry[arg]
-	if !ok {
-		return nil
-	}
-	return &cmd
+// Manager implements Command by delegating to other commands
+type Manager struct {
+	commands map[string]Command
 }
 
-// Available returns a readable string of registered commands.
-func Available() string {
-	var cmdNames []string
-	for k := range commandRegistry {
-		cmdNames = append(cmdNames, k)
+var _ Command = &Manager{}
+
+// NewManager is a constructor
+func NewManager(commands map[string]Command) *Manager {
+	return &Manager{
+		commands: commands,
 	}
-	return "[" + strings.Join(cmdNames, ", ") + "]"
+}
+
+// Run runs the manager
+func (m *Manager) Run(args []string) error {
+	if len(args) < 1 {
+		return fmt.Errorf("need at least one arg for the command to run. commands: %s",
+			m.listCommands())
+	}
+	name := args[0]
+	cmd := m.findCommand(name)
+	if cmd == nil {
+		return fmt.Errorf("no known command with name \"%s\". commands: %s",
+			name, m.listCommands())
+	}
+	if err := cmd.Run(args[1:]); err != nil {
+		return fmt.Errorf("\"%s\" failed: %w", name, err)
+	}
+	return nil
+}
+
+func (m *Manager) listCommands() string {
+	var names []string
+	for name := range m.commands {
+		names = append(names, name)
+	}
+	return fmt.Sprintf("[%s]", strings.Join(names, ", "))
+}
+
+// Note: result is nillable
+func (m *Manager) findCommand(name string) Command {
+	for cmdName, cmd := range m.commands {
+		if cmdName == name {
+			return cmd
+		}
+	}
+	return nil
+}
+
+// Gen implements command to generate go files
+type Gen struct{}
+
+var _ Command = &Gen{}
+
+// NewGen is a constructor
+func NewGen() *Gen {
+	return &Gen{}
+}
+
+// Run runs gen
+func (g *Gen) Run(args []string) error {
+	fmt.Println("Hello world")
+	return nil
 }

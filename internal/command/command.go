@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/liampulles/juryrig/internal/config"
+	"github.com/liampulles/juryrig/internal/parse"
 )
 
 // Command runs commands
@@ -83,6 +84,9 @@ func (g *Gen) Run(args []string) error {
 		return fmt.Errorf("could not fetch config: %w", err)
 	}
 
-	fmt.Printf("Hello world\n%+v\n", cfg)
+	_, err = parse.ParseFileWithMapperDefs(cfg.BaseFilename)
+	if err != nil {
+		return fmt.Errorf("could not parse file %s: %w", cfg.BaseFilename, err)
+	}
 	return nil
 }

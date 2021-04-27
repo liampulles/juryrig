@@ -9,6 +9,6 @@ type Mapper interface {
 	// +juryrig:ignore:director
 	// +juryrig:linkfunc:eu->ToInternalUser->user
 	ToInternalUserFilm(ef *ExternalFilm, eu *ExternalUser) *InternalUserFilm
-	// +juryrig:link:username->username
+	// +juryrig:link:eu.username->username
 	ToInternalUser(eu *ExternalUser) *InternalUser
 }

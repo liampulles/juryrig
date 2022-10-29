@@ -34,28 +34,30 @@ var (
 
 // Just extract the most basic raw details from the files. Keep the
 // ast stuff here basically.
-func extractRaw(filename string) ([]rawMapperInfo, error) {
+func extractRaw(filename string) (string, []rawMapperInfo, error) {
 	// Read ast and files
 	fset := token.NewFileSet()
 	astFile, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
 
 	if err != nil {
-		return nil, fmt.Errorf("could not parse file %s: %w", filename, err)
+		return "", nil, fmt.Errorf("could not parse file %s: %w", filename, err)
 	}
 
 	body, err := os.ReadFile(filename)
 
 	if err != nil {
-		return nil, fmt.Errorf("could not read file %s: %w", filename, err)
+		return "", nil, fmt.Errorf("could not read file %s: %w", filename, err)
 	}
 
 	// Parse
+	pkg := astFile.Name.Name
+
 	result, err := parseMappers(fset, body, astFile)
 	if err != nil {
-		return nil, fmt.Errorf("could not parse ast: %w", err)
+		return "", nil, fmt.Errorf("could not parse ast: %w", err)
 	}
 
-	return result, nil
+	return pkg, result, nil
 }
 
 func parseMappers(fset *token.FileSet, body []byte, astFile *ast.File) ([]rawMapperInfo, error) {

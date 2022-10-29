@@ -2,6 +2,11 @@ package parse
 
 // High-level mapper types
 
+type JuryrigSpec struct {
+	Package string
+	Mappers []Mapper
+}
+
 type Mapper struct {
 	Name            string
 	MapperFunctions []MapperFunction

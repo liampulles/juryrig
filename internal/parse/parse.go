@@ -8,11 +8,11 @@ import (
 )
 
 // Read parses Go source into Mapper definitions.
-func Read(filename string) ([]Mapper, error) {
+func Read(filename string) (JuryrigSpec, error) {
 	// Just read the raw details (don't want to deal with ast stuff here)
-	raw, err := extractRaw(filename)
+	pkg, raw, err := extractRaw(filename)
 	if err != nil {
-		return nil, fmt.Errorf("could not extract raw: %w", err)
+		return JuryrigSpec{}, fmt.Errorf("could not extract raw: %w", err)
 	}
 
 	// Convert to Mapper types
@@ -21,15 +21,19 @@ func Read(filename string) ([]Mapper, error) {
 	for i, rawI := range raw {
 		mapper, err := convertRawToMapper(rawI)
 		if err != nil {
-			return nil, err
+			return JuryrigSpec{}, err
 		}
 
 		mappers[i] = mapper
 	}
 
-	fmt.Printf("%+v\n", mappers)
+	fmt.Printf("%s - %+v\n", pkg, mappers)
 
-	return mappers, nil
+	// Join
+	return JuryrigSpec{
+		Package: pkg,
+		Mappers: mappers,
+	}, nil
 }
 
 func convertRawToMapper(raw rawMapperInfo) (Mapper, error) {

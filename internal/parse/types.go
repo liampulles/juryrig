@@ -8,7 +8,7 @@ type Mapper struct {
 }
 
 type MapperFunction struct {
-	Function   *Function
+	Function   Function
 	Directives []Directive
 }
 
@@ -32,38 +32,38 @@ type Function struct {
 // Directives
 
 type Directive interface {
-	Target() *Target
+	Target() Target
 }
 
 type LinkDirective struct {
-	Source *Source
-	target *Target
+	Source Source
+	target Target
 }
 
 var _ Directive = &LinkDirective{}
 
-func (ld *LinkDirective) Target() *Target {
+func (ld *LinkDirective) Target() Target {
 	return ld.target
 }
 
 type IgnoreDirective struct {
-	target *Target
+	target Target
 }
 
 var _ Directive = &IgnoreDirective{}
 
-func (id *IgnoreDirective) Target() *Target {
+func (id *IgnoreDirective) Target() Target {
 	return id.target
 }
 
 type LinkFuncDirective struct {
 	Sources      []Source
 	FunctionName string
-	target       *Target
+	target       Target
 }
 
 var _ Directive = &LinkFuncDirective{}
 
-func (lfd *LinkFuncDirective) Target() *Target {
+func (lfd *LinkFuncDirective) Target() Target {
 	return lfd.target
 }

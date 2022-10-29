@@ -61,9 +61,9 @@ func extractRaw(filename string) (string, []rawMapperInfo, error) {
 }
 
 func parseMappers(fset *token.FileSet, body []byte, astFile *ast.File) ([]rawMapperInfo, error) {
-	mappers := make([]rawMapperInfo, len(astFile.Decls))
+	var mappers []rawMapperInfo //nolint:prealloc
 	// For the ast declarations we care about (juryrig ones)...
-	for i, decl := range astFile.Decls {
+	for _, decl := range astFile.Decls {
 		if !isJuryRigMapperDecl(decl) {
 			continue
 		}
@@ -74,7 +74,7 @@ func parseMappers(fset *token.FileSet, body []byte, astFile *ast.File) ([]rawMap
 			return nil, fmt.Errorf("could not extract mapper: %w", err)
 		}
 
-		mappers[i] = raw
+		mappers = append(mappers, raw)
 	}
 
 	return mappers, nil
@@ -249,6 +249,10 @@ func extractFuncResultType(astFile *ast.File, body []byte, fn *ast.FuncType) (st
 func isJuryRigCommentGroup(commentGroup *ast.CommentGroup) bool {
 	// A comment group is a juryrig comment croup if any comment
 	// is a juryrig comment.
+	if commentGroup == nil {
+		return false
+	}
+
 	for _, cmt := range commentGroup.List {
 		if isTaggedComment(cmt, juryRigTag) {
 			return true

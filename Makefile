@@ -4,7 +4,7 @@ GOBIN := $(shell go env GOPATH)/bin
 # Keep test at the top so that it is default when `make` is called.
 # This is used by Travis CI.
 coverage.txt:
-	go test -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./pkg/...,./ ./...
+	go test -race -coverprofile=coverage.txt -covermode=atomic -coverpkg=./... ./...
 view-cover: clean coverage.txt
 	go tool cover -html=coverage.txt
 test: build

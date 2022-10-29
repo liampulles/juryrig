@@ -4,9 +4,13 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/fs"
+	"os"
+	"path"
 
 	"github.com/liampulles/juryrig/internal/config"
 	"github.com/liampulles/juryrig/internal/parse"
+	"github.com/liampulles/juryrig/internal/template"
 )
 
 // Gen implements Command to generate go files.
@@ -26,7 +30,7 @@ func NewGen(cfgService config.Service) *Gen {
 // Run generates mappers, as per a the spec in the comments of the file.
 func (g *Gen) Run(args []string) error {
 	// Read args
-	_, err := g.parseArgs(args)
+	arguments, err := g.parseArgs(args)
 	if err != nil {
 		return err
 	}
@@ -38,9 +42,23 @@ func (g *Gen) Run(args []string) error {
 	}
 
 	// Parse mappers
-	_, err = parse.Read(cfg.BaseFilename)
+	spec, err := parse.Read(cfg.BaseFilename)
 	if err != nil {
 		return fmt.Errorf("could not parse file %s: %w", cfg.BaseFilename, err)
+	}
+
+	if len(spec.Mappers) == 0 {
+		// Nothing to do.
+		return nil
+	}
+
+	// Template
+	out := template.Generate(spec)
+
+	// Write out
+	outFile := g.adjustedOutputFile(cfg, arguments)
+	if err := os.WriteFile(outFile, out, fs.ModePerm); err != nil {
+		return fmt.Errorf("could not create %s: %w", arguments.OutputFile, err)
 	}
 
 	return nil
@@ -68,4 +86,9 @@ func (g *Gen) parseArgs(args []string) (arguments, error) {
 	return arguments{
 		OutputFile: *outputFile,
 	}, nil
+}
+
+func (g *Gen) adjustedOutputFile(cfg *config.Config, args arguments) string {
+	dir := path.Dir(cfg.BaseFilename)
+	return path.Join(dir, args.OutputFile)
 }

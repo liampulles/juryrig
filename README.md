@@ -35,7 +35,7 @@
 
 ## Status
 
-JuryRig is currently in heavy development, and is thus alpha.
+JuryRig is in alpha - you can try it. :)
 
 ## Run
 
@@ -81,14 +81,15 @@ package film
 
 //go:generate juryrig gen -o zz.mapper.impl.go
 
+// +juryrig:mapper
 type Mapper interface {
-    // +juryrig:link:ef.title->title
-    // +juryrig:link:ef.runtime->runtime
-    // +juryrig:ignore:director
-    // +juryrig:linkfunc:eu->ToInternalUser->user
-    ToInternalUserFilm(ef ExternalFilm, eu ExternalUser) InternalUserFilm
-    // +juryrig:link:eu.username->username
-    ToInternalUser(eu ExternalUser) InternalUser
+	// +juryrig:link:ef.title->title
+	// +juryrig:link:ef.runtime->runtime
+	// +juryrig:ignore:director
+	// +juryrig:linkfunc:eu->ToInternalUser->user
+	ToInternalUserFilm(ef ExternalFilm, eu ExternalUser) InternalUserFilm
+	// +juryrig:link:eu.username->username
+	ToInternalUser(eu ExternalUser) InternalUser
 }
 ```
 
@@ -97,23 +98,21 @@ Running go generate will implement the following mapper struct in `zz.mapper.imp
 ```go
 package film
 
-type MapperImpl struct {}
+type MapperImpl struct{}
 
-func NewMapperImpl() *MapperImpl
-
-func (mi *MapperImpl) ToInternalUserFilm(ef ExternalFilm, eu ExternalUser) InternalUserFilm {
-    return InternalUserFilm{
-        title: ef.title,
-        runtime: ef.runtime,
-        // director: (ignored)
-        user: mi.ToInternalUser(eu),
-    }
+func (impl *MapperImpl) ToInternalUserFilm(ef ExternalFilm, eu ExternalUser) InternalUserFilm {
+	return InternalUserFilm{
+		title:   ef.title,
+		runtime: ef.runtime,
+		// director: (ignored),
+		user: impl.ToInternalUser(eu),
+	}
 }
 
-func (mi *MapperImpl) ToInternalUser(eu ExternalUser) InternalUser {
-    return InternalUser{
-        username: eu.username,
-    }
+func (impl *MapperImpl) ToInternalUser(eu ExternalUser) InternalUser {
+	return InternalUser{
+		username: eu.username,
+	}
 }
 ```
 

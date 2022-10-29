@@ -3,6 +3,7 @@ package template
 import (
 	"bytes"
 	"fmt"
+	"go/format"
 	"strings"
 	"text/template"
 
@@ -10,31 +11,33 @@ import (
 )
 
 //nolint:gochecknoglobals
-var mapperFileTemplate = template.Must(template.New("mapper-file").Parse(`package {{Package}} 
-{{ range .Mappers }}
-
-type {{.Name}}Impl struct{}
-{{ range $f, $func := .Functions }}
-
-func (impl *{{.Name}}Impl) {{$func.Name}}({{$func.Params}}) {{$func.Result}} {
-	return {{$func..Result}}{
-{{ range $func.Directives }}
-		{{.}},
-{{ end }}
+var mapperFileTemplate = template.Must(template.New("mapper-file").
+	Parse(`package {{ .Package }}{{ range $m, $mapper := .Mappers }}
+type {{$mapper.Name}}Impl struct{}{{ range $f, $func := $mapper.Functions }}
+func (impl *{{$mapper.Name}}Impl) {{$func.Name}}({{$func.Params}}) {{$func.Result}} {
+	return {{$func.Result}}{
+		{{ range $func.Directives }}{{.}},
+		{{ end }}
 	}
 }
-{{ end }}{{ end }}
-`))
+{{ end }}{{ end }}`))
 
-func Generate(in parse.JuryrigSpec) string {
+func Generate(in parse.JuryrigSpec) []byte {
 	spec := mapSpec(in)
 	w := &bytes.Buffer{}
 
+	// Template it
 	if err := mapperFileTemplate.Execute(w, spec); err != nil {
-		return fmt.Sprintf("<<<TEMPLATE ERROR: %s>>>", err.Error())
+		return []byte(fmt.Sprintf("<<<TEMPLATE ERROR: %s>>>", err.Error()))
 	}
 
-	return w.String()
+	// Format it
+	formatted, err := format.Source(w.Bytes())
+	if err != nil {
+		return []byte(fmt.Sprintf("<<<FORMAT ERROR: %s>>>", err.Error()))
+	}
+
+	return formatted
 }
 
 func mapSpec(in parse.JuryrigSpec) spec {

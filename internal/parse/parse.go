@@ -27,8 +27,6 @@ func Read(filename string) (JuryrigSpec, error) {
 		mappers[i] = mapper
 	}
 
-	fmt.Printf("%s - %+v\n", pkg, mappers)
-
 	// Join
 	return JuryrigSpec{
 		Package: pkg,

@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+
 	goConfig "github.com/liampulles/go-config"
 )
 
@@ -13,31 +15,31 @@ type Config struct {
 	PackageName     string
 }
 
-// Service allows for interfaceng with environment config
+// Service allows for interfaceng with environment config.
 type Service interface {
 	Read() (*Config, error)
 }
 
-// ServiceImpl implements service
+// ServiceImpl implements service.
 type ServiceImpl struct {
 	source goConfig.Source
 }
 
-// NewServiceImpl is a constructor
+// NewServiceImpl is a constructor.
 func NewServiceImpl(source goConfig.Source) *ServiceImpl {
 	return &ServiceImpl{
 		source: source,
 	}
 }
 
-// Check we implement the interface
-var _ Service = &ServiceImpl{}
+// Check we implement the interface.
+var _ Service = &ServiceImpl{} //nolint:exhaustruct
 
 // Read reads the environment into Config. If there are any issues,
 // an error is returned.
 func (s *ServiceImpl) Read() (*Config, error) {
 	typedSource := goConfig.NewTypedSource(s.source)
-	config := &Config{}
+	config := &Config{} //nolint:exhaustruct
 
 	if err := goConfig.LoadProperties(typedSource,
 		goConfig.StrProp("GOARCH", &config.Architecture, false),
@@ -46,7 +48,7 @@ func (s *ServiceImpl) Read() (*Config, error) {
 		goConfig.IntProp("GOLINE", &config.DirectiveLine, false),
 		goConfig.StrProp("GOPACKAGE", &config.PackageName, false),
 	); err != nil {
-		return nil, err
+		return nil, fmt.Errorf("could not load config: %w", err)
 	}
 
 	return config, nil

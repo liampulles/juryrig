@@ -12,25 +12,26 @@ type Gen struct {
 	cfgService config.Service
 }
 
-var _ Command = &Gen{}
+var _ Command = &Gen{} //nolint:exhaustruct
 
-// NewGen is a constructor
+// NewGen is a constructor.
 func NewGen(cfgService config.Service) *Gen {
 	return &Gen{
 		cfgService: cfgService,
 	}
 }
 
-// Run runs gen
+// Run runs gen.
 func (g *Gen) Run(args []string) error {
 	cfg, err := g.cfgService.Read()
 	if err != nil {
 		return fmt.Errorf("could not fetch config: %w", err)
 	}
 
-	_, err = parse.ParseFileWithMapperDefs(cfg.BaseFilename)
+	_, err = parse.Read(cfg.BaseFilename)
 	if err != nil {
 		return fmt.Errorf("could not parse file %s: %w", cfg.BaseFilename, err)
 	}
+
 	return nil
 }

@@ -4,7 +4,6 @@ import (
 	"os"
 
 	goConfig "github.com/liampulles/go-config"
-
 	"github.com/liampulles/juryrig/internal/wire"
 )
 

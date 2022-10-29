@@ -16,7 +16,8 @@ type MapperFunction struct {
 
 type Source struct {
 	Parameter string
-	Field     string
+	// Optional
+	Field string
 }
 
 type Target struct {
@@ -29,41 +30,26 @@ type Function struct {
 	Results    []string
 }
 
-// Directives
-
-type Directive interface {
-	Target() Target
-}
+// Directive indicates how to handle a given target field on a struct.
+type Directive interface{}
 
 type LinkDirective struct {
 	Source Source
-	target Target
+	Target Target
 }
 
-var _ Directive = &LinkDirective{}
-
-func (ld *LinkDirective) Target() Target {
-	return ld.target
-}
+var _ Directive = &LinkDirective{} //nolint:exhaustruct
 
 type IgnoreDirective struct {
-	target Target
+	Target Target
 }
 
-var _ Directive = &IgnoreDirective{}
-
-func (id *IgnoreDirective) Target() Target {
-	return id.target
-}
+var _ Directive = &IgnoreDirective{} //nolint:exhaustruct
 
 type LinkFuncDirective struct {
 	Sources      []Source
 	FunctionName string
-	target       Target
+	Target       Target
 }
 
-var _ Directive = &LinkFuncDirective{}
-
-func (lfd *LinkFuncDirective) Target() Target {
-	return lfd.target
-}
+var _ Directive = &LinkFuncDirective{} //nolint:exhaustruct

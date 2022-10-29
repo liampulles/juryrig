@@ -1,6 +1,7 @@
 package parse
 
 import (
+	"errors"
 	"fmt"
 	"go/ast"
 	"go/parser"
@@ -22,16 +23,28 @@ type rawMapperFuncInfo struct {
 	jrComments []string
 }
 
+const (
+	juryRigTag = "// +juryrig:"
+)
+
+var (
+	ErrUnexpectedAST = errors.New("unexpected AST")
+	ErrSpec          = errors.New("specification error")
+)
+
 // Just extract the most basic raw details from the files. Keep the
 // ast stuff here basically.
 func extractRaw(filename string) ([]rawMapperInfo, error) {
 	// Read ast and files
 	fset := token.NewFileSet()
 	astFile, err := parser.ParseFile(fset, filename, nil, parser.ParseComments)
+
 	if err != nil {
 		return nil, fmt.Errorf("could not parse file %s: %w", filename, err)
 	}
+
 	body, err := os.ReadFile(filename)
+
 	if err != nil {
 		return nil, fmt.Errorf("could not read file %s: %w", filename, err)
 	}
@@ -41,13 +54,14 @@ func extractRaw(filename string) ([]rawMapperInfo, error) {
 	if err != nil {
 		return nil, fmt.Errorf("could not parse ast: %w", err)
 	}
+
 	return result, nil
 }
 
 func parseMappers(fset *token.FileSet, body []byte, astFile *ast.File) ([]rawMapperInfo, error) {
-	var result []rawMapperInfo
+	mappers := make([]rawMapperInfo, len(astFile.Decls))
 	// For the ast declarations we care about (juryrig ones)...
-	for _, decl := range astFile.Decls {
+	for i, decl := range astFile.Decls {
 		if !isJuryRigMapperDecl(decl) {
 			continue
 		}
@@ -57,9 +71,11 @@ func parseMappers(fset *token.FileSet, body []byte, astFile *ast.File) ([]rawMap
 		if err != nil {
 			return nil, fmt.Errorf("could not extract mapper: %w", err)
 		}
-		result = append(result, raw)
+
+		mappers[i] = raw
 	}
-	return result, nil
+
+	return mappers, nil
 }
 
 func isJuryRigMapperDecl(decl ast.Decl) bool {
@@ -69,7 +85,8 @@ func isJuryRigMapperDecl(decl ast.Decl) bool {
 	if !ok {
 		return false
 	}
-	return isJuryRigMapperCommentGroup(genDecl.Doc)
+
+	return isJuryRigCommentGroup(genDecl.Doc)
 }
 
 func extractRawMapperInfo(fset *token.FileSet, astFile *ast.File, body []byte, decl ast.Decl) (rawMapperInfo, error) {
@@ -78,10 +95,13 @@ func extractRawMapperInfo(fset *token.FileSet, astFile *ast.File, body []byte, d
 	if err != nil {
 		return rawMapperInfo{}, err
 	}
+
 	fnInfos, err := extractRawMapperFuncInfos(fset, astFile, body, intSpec.Methods.List)
+
 	if err != nil {
 		return rawMapperInfo{}, fmt.Errorf("could not extract methods for mapper: %w", err)
 	}
+
 	comments := filterTaggedComments(genDecl.Doc.List, juryRigTag)
 
 	// ...and Map.
@@ -92,59 +112,81 @@ func extractRawMapperInfo(fset *token.FileSet, astFile *ast.File, body []byte, d
 	}, nil
 }
 
-func extractRawMapperInfoAstDetails(fset *token.FileSet, decl ast.Decl) (*ast.GenDecl, *ast.TypeSpec, *ast.InterfaceType, error) {
+func extractRawMapperInfoAstDetails(
+	fset *token.FileSet,
+	decl ast.Decl,
+) (*ast.GenDecl, *ast.TypeSpec, *ast.InterfaceType, error) {
 	genDecl, ok := decl.(*ast.GenDecl)
 	if !ok {
-		return nil, nil, nil, fmt.Errorf("mapper tagged type is not a declaration %s",
-			locationDebugInfo(fset, decl))
+		return nil, nil, nil, fmt.Errorf("mapper tagged type is not a declaration %s: %w",
+			locationDebugInfo(fset, decl), ErrUnexpectedAST)
 	}
 
 	if len(genDecl.Specs) != 1 {
-		return nil, nil, nil, fmt.Errorf("expect mapper declaration to have 1 spec, but has %d",
-			len(genDecl.Specs))
+		return nil, nil, nil, fmt.Errorf("expect mapper declaration to have 1 spec, but has %d: %w",
+			len(genDecl.Specs), ErrUnexpectedAST)
 	}
+
 	spec := genDecl.Specs[0]
 	typeSpec, ok := spec.(*ast.TypeSpec)
+
 	if !ok {
-		return nil, nil, nil, fmt.Errorf("mapper spec is not a type %s",
-			locationDebugInfo(fset, genDecl))
+		return nil, nil, nil, fmt.Errorf("mapper spec is not a type %s: %w",
+			locationDebugInfo(fset, genDecl), ErrUnexpectedAST)
 	}
 
 	intSpec, ok := typeSpec.Type.(*ast.InterfaceType)
 	if !ok {
-		return nil, nil, nil, fmt.Errorf("mapper type is not an interface %s",
-			locationDebugInfo(fset, typeSpec))
+		return nil, nil, nil, fmt.Errorf("mapper type is not an interface %s: %w",
+			locationDebugInfo(fset, typeSpec), ErrSpec)
 	}
 
 	return genDecl, typeSpec, intSpec, nil
 }
 
-func extractRawMapperFuncInfos(fset *token.FileSet, astFile *ast.File, body []byte, methodFields []*ast.Field) ([]rawMapperFuncInfo, error) {
+func extractRawMapperFuncInfos(
+	fset *token.FileSet,
+	astFile *ast.File,
+	body []byte,
+	methodFields []*ast.Field,
+) ([]rawMapperFuncInfo, error) {
 	// Loop through and delegate
 	result := make([]rawMapperFuncInfo, len(methodFields))
+
 	for i, methodField := range methodFields {
 		fnInfo, err := extractRawMapperFuncInfo(fset, astFile, body, methodField)
 		if err != nil {
 			return nil, fmt.Errorf("could not extract method field %d: %w", i, err)
 		}
+
 		result[i] = fnInfo
 	}
+
 	return result, nil
 }
 
-func extractRawMapperFuncInfo(fset *token.FileSet, astFile *ast.File, body []byte, methodField *ast.Field) (rawMapperFuncInfo, error) {
+func extractRawMapperFuncInfo(
+	fset *token.FileSet,
+	astFile *ast.File,
+	body []byte,
+	methodField *ast.Field,
+) (rawMapperFuncInfo, error) {
 	// Extract details...
 	if len(methodField.Names) != 1 {
-		return rawMapperFuncInfo{}, fmt.Errorf("expected method field to have 1 name, but has %d %s",
-			len(methodField.Names), locationDebugInfo(fset, methodField))
+		return rawMapperFuncInfo{}, fmt.Errorf("expected method field to have 1 name, but has %d %s: %w",
+			len(methodField.Names), locationDebugInfo(fset, methodField), ErrUnexpectedAST)
 	}
+
 	name := methodField.Names[0].Name
 	funcType, ok := methodField.Type.(*ast.FuncType)
+
 	if !ok {
-		return rawMapperFuncInfo{}, fmt.Errorf("method field type is not a function %s",
-			locationDebugInfo(fset, methodField))
+		return rawMapperFuncInfo{}, fmt.Errorf("method field type is not a function %s: %w",
+			locationDebugInfo(fset, methodField), ErrUnexpectedAST)
 	}
+
 	params, err := extractFuncParamaters(fset, astFile, body, funcType)
+
 	if err != nil {
 		return rawMapperFuncInfo{}, fmt.Errorf("could not extract func parameters: %w", err)
 	}
@@ -153,56 +195,69 @@ func extractRawMapperFuncInfo(fset *token.FileSet, astFile *ast.File, body []byt
 	return rawMapperFuncInfo{
 		name:       name,
 		parameters: params,
-		results:    extractFuncResultTypes(fset, astFile, body, funcType),
+		results:    extractFuncResultTypes(astFile, body, funcType),
 		jrComments: filterTaggedComments(methodField.Doc.List, juryRigTag),
 	}, nil
 }
 
-func extractFuncParamaters(fset *token.FileSet, astFile *ast.File, body []byte, fn *ast.FuncType) (map[string]string, error) {
+func extractFuncParamaters(
+	fset *token.FileSet,
+	astFile *ast.File,
+	body []byte,
+	fn *ast.FuncType,
+) (map[string]string, error) {
 	result := make(map[string]string)
 	// For each function parameter...
 	for i, paramField := range fn.Params.List {
 		// ...Read the name...
 		if len(paramField.Names) != 1 {
-			return nil, fmt.Errorf("paramater %d does not have one name %s",
-				i, locationDebugInfo(fset, paramField))
+			return nil, fmt.Errorf("paramater %d does not have one name %s: %w",
+				i, locationDebugInfo(fset, paramField), ErrUnexpectedAST)
 		}
+
 		name := paramField.Names[0].Name
+
 		// ...and Read the type.
-		typ := readAsString(fset, astFile, body, paramField.Type)
+		typ := readAsString(astFile, body, paramField.Type)
 
 		result[name] = typ
 	}
+
 	return result, nil
 }
 
-func extractFuncResultTypes(fset *token.FileSet, astFile *ast.File, body []byte, fn *ast.FuncType) []string {
-	var types []string
-	for _, resultField := range fn.Results.List {
-		typ := readAsString(fset, astFile, body, resultField.Type)
-		types = append(types, typ)
+func extractFuncResultTypes(astFile *ast.File, body []byte, fn *ast.FuncType) []string {
+	types := make([]string, len(fn.Results.List))
+
+	for i, resultField := range fn.Results.List {
+		typ := readAsString(astFile, body, resultField.Type)
+		types[i] = typ
 	}
+
 	return types
 }
 
-func isJuryRigMapperCommentGroup(commentGroup *ast.CommentGroup) bool {
+func isJuryRigCommentGroup(commentGroup *ast.CommentGroup) bool {
 	// A comment group is a juryrig comment croup if any comment
 	// is a juryrig comment.
 	for _, cmt := range commentGroup.List {
-		if isTaggedComment(cmt, juryRigMapperTag) {
+		if isTaggedComment(cmt, juryRigTag) {
 			return true
 		}
 	}
+
 	return false
 }
 
 func filterTaggedComments(comments []*ast.Comment, tag string) []string {
 	var result []string
+
 	for _, cmt := range comments {
 		if isTaggedComment(cmt, tag) {
 			result = append(result, strings.TrimSpace(cmt.Text))
 		}
 	}
+
 	return result
 }
 
@@ -216,7 +271,7 @@ func locationDebugInfo(fset *token.FileSet, node ast.Node) string {
 }
 
 // Take an ast node and read the actual related source.
-func readAsString(fset *token.FileSet, astFile *ast.File, body []byte, node ast.Node) string {
+func readAsString(astFile *ast.File, body []byte, node ast.Node) string {
 	offset := astFile.Pos()
 	return string(body[node.Pos()-offset : node.End()-offset])
 }

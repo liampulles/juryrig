@@ -17,6 +17,7 @@ func Run(args []string, cfgSource goConfig.Source) int {
 		fmt.Fprintf(os.Stderr, "ERROR: %s\n", err.Error())
 		return 1
 	}
+
 	return 0
 }
 

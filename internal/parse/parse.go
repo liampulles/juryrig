@@ -86,7 +86,7 @@ func createMapperFunction(rawFunc rawMapperFuncInfo) Function {
 	return Function{
 		Name:       rawFunc.name,
 		Parameters: rawFunc.parameters,
-		Results:    rawFunc.results,
+		Result:     rawFunc.result,
 	}
 }
 

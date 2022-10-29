@@ -18,8 +18,8 @@ type rawMapperInfo struct {
 
 type rawMapperFuncInfo struct {
 	name       string
-	parameters map[string]string
-	results    []string
+	parameters []Parameter
+	result     string
 	jrComments []string
 }
 
@@ -193,11 +193,17 @@ func extractRawMapperFuncInfo(
 		return rawMapperFuncInfo{}, fmt.Errorf("could not extract func parameters: %w", err)
 	}
 
+	result, err := extractFuncResultType(astFile, body, funcType)
+
+	if err != nil {
+		return rawMapperFuncInfo{}, err
+	}
+
 	// ...and Map.
 	return rawMapperFuncInfo{
 		name:       name,
 		parameters: params,
-		results:    extractFuncResultTypes(astFile, body, funcType),
+		result:     result,
 		jrComments: filterTaggedComments(methodField.Doc.List, juryRigTag),
 	}, nil
 }
@@ -207,8 +213,8 @@ func extractFuncParamaters(
 	astFile *ast.File,
 	body []byte,
 	fn *ast.FuncType,
-) (map[string]string, error) {
-	result := make(map[string]string)
+) ([]Parameter, error) {
+	result := make([]Parameter, len(fn.Params.List))
 	// For each function parameter...
 	for i, paramField := range fn.Params.List {
 		// ...Read the name...
@@ -222,21 +228,22 @@ func extractFuncParamaters(
 		// ...and Read the type.
 		typ := readAsString(astFile, body, paramField.Type)
 
-		result[name] = typ
+		result[i] = Parameter{
+			Name: name,
+			Type: typ,
+		}
 	}
 
 	return result, nil
 }
 
-func extractFuncResultTypes(astFile *ast.File, body []byte, fn *ast.FuncType) []string {
-	types := make([]string, len(fn.Results.List))
-
-	for i, resultField := range fn.Results.List {
-		typ := readAsString(astFile, body, resultField.Type)
-		types[i] = typ
+func extractFuncResultType(astFile *ast.File, body []byte, fn *ast.FuncType) (string, error) {
+	if len(fn.Results.List) != 1 {
+		return "", fmt.Errorf("mapper function must have exactly one result: %w",
+			ErrSpec)
 	}
 
-	return types
+	return readAsString(astFile, body, fn.Results.List[0].Type), nil
 }
 
 func isJuryRigCommentGroup(commentGroup *ast.CommentGroup) bool {

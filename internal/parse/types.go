@@ -31,8 +31,13 @@ type Target struct {
 
 type Function struct {
 	Name       string
-	Parameters map[string]string
-	Results    []string
+	Parameters []Parameter
+	Result     string
+}
+
+type Parameter struct {
+	Name string
+	Type string
 }
 
 // Directive indicates how to handle a given target field on a struct.

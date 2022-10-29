@@ -3,9 +3,6 @@ package command
 import (
 	"fmt"
 	"strings"
-
-	"github.com/liampulles/juryrig/internal/config"
-	"github.com/liampulles/juryrig/internal/parse"
 )
 
 // Command runs commands
@@ -59,34 +56,6 @@ func (m *Manager) findCommand(name string) Command {
 		if cmdName == name {
 			return cmd
 		}
-	}
-	return nil
-}
-
-// Gen implements command to generate go files
-type Gen struct {
-	cfgService config.Service
-}
-
-var _ Command = &Gen{}
-
-// NewGen is a constructor
-func NewGen(cfgService config.Service) *Gen {
-	return &Gen{
-		cfgService: cfgService,
-	}
-}
-
-// Run runs gen
-func (g *Gen) Run(args []string) error {
-	cfg, err := g.cfgService.Read()
-	if err != nil {
-		return fmt.Errorf("could not fetch config: %w", err)
-	}
-
-	_, err = parse.ParseFileWithMapperDefs(cfg.BaseFilename)
-	if err != nil {
-		return fmt.Errorf("could not parse file %s: %w", cfg.BaseFilename, err)
 	}
 	return nil
 }

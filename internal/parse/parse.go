@@ -43,7 +43,7 @@ func parseMappers(fset *token.FileSet, body []byte, astFile *ast.File) ([]Mapper
 		if err != nil {
 			return nil, fmt.Errorf("could not extract mapper: %w", err)
 		}
-		fmt.Println(raw)
+		fmt.Printf("%+v\n", raw)
 	}
 	return result, nil
 }
@@ -51,7 +51,7 @@ func parseMappers(fset *token.FileSet, body []byte, astFile *ast.File) ([]Mapper
 type rawMapperInfo struct {
 	name          string
 	topJrComments []string
-	fns           []*rawMapperFuncInfo
+	fns           []rawMapperFuncInfo
 }
 
 type rawMapperFuncInfo struct {
@@ -77,7 +77,7 @@ func extractRawMapperInfo(fset *token.FileSet, astFile *ast.File, body []byte, d
 			locationInfo(fset, decl))
 	}
 
-	result.topJrComments = filterJuryRigComments(genDecl.Doc.List, juryRigTag)
+	result.topJrComments = filterTaggedComments(genDecl.Doc.List, juryRigTag)
 
 	if len(genDecl.Specs) != 1 {
 		return nil, fmt.Errorf("expect mapper declaration to have 1 spec, but has %d",
@@ -107,8 +107,8 @@ func extractRawMapperInfo(fset *token.FileSet, astFile *ast.File, body []byte, d
 	return result, nil
 }
 
-func extractRawMapperFuncInfos(fset *token.FileSet, astFile *ast.File, body []byte, fields []*ast.Field) ([]*rawMapperFuncInfo, error) {
-	var result []*rawMapperFuncInfo
+func extractRawMapperFuncInfos(fset *token.FileSet, astFile *ast.File, body []byte, fields []*ast.Field) ([]rawMapperFuncInfo, error) {
+	var result []rawMapperFuncInfo
 	for i, field := range fields {
 		fnInfo, err := extractRawMapperFuncInfo(fset, astFile, body, field)
 		if err != nil {
@@ -119,28 +119,28 @@ func extractRawMapperFuncInfos(fset *token.FileSet, astFile *ast.File, body []by
 	return result, nil
 }
 
-func extractRawMapperFuncInfo(fset *token.FileSet, astFile *ast.File, body []byte, field *ast.Field) (*rawMapperFuncInfo, error) {
-	result := &rawMapperFuncInfo{}
+func extractRawMapperFuncInfo(fset *token.FileSet, astFile *ast.File, body []byte, field *ast.Field) (rawMapperFuncInfo, error) {
+	result := rawMapperFuncInfo{}
 	if len(field.Names) != 1 {
-		return nil, fmt.Errorf("expected field to have 1 name, but has %d %s",
+		return rawMapperFuncInfo{}, fmt.Errorf("expected field to have 1 name, but has %d %s",
 			len(field.Names), locationInfo(fset, field))
 	}
 	result.name = field.Names[0].Name
 
 	funcType, ok := field.Type.(*ast.FuncType)
 	if !ok {
-		return nil, fmt.Errorf("field type is not a function %s",
+		return rawMapperFuncInfo{}, fmt.Errorf("field type is not a function %s",
 			locationInfo(fset, field))
 	}
 
 	params, err := extractFuncParamaters(fset, astFile, body, funcType)
 	if err != nil {
-		return nil, fmt.Errorf("could not extract func parameters: %w", err)
+		return rawMapperFuncInfo{}, fmt.Errorf("could not extract func parameters: %w", err)
 	}
 	result.parameters = params
 
 	result.results = extractFuncResults(fset, astFile, body, funcType)
-	result.jrComments = filterJuryRigComments(field.Doc.List, juryRigTag)
+	result.jrComments = filterTaggedComments(field.Doc.List, juryRigTag)
 
 	return result, nil
 }
@@ -183,24 +183,24 @@ func extractMapperComment(jrComments []string) (string, error) {
 
 func isJuryRigMapperCommentGroup(commentGroup *ast.CommentGroup) bool {
 	for _, cmt := range commentGroup.List {
-		if isJuryRigComment(cmt, juryRigMapperTag) {
+		if isTaggedComment(cmt, juryRigMapperTag) {
 			return true
 		}
 	}
 	return false
 }
 
-func filterJuryRigComments(comments []*ast.Comment, tag string) []string {
+func filterTaggedComments(comments []*ast.Comment, tag string) []string {
 	var result []string
 	for _, cmt := range comments {
-		if isJuryRigComment(cmt, tag) {
+		if isTaggedComment(cmt, tag) {
 			result = append(result, strings.TrimSpace(cmt.Text))
 		}
 	}
 	return result
 }
 
-func isJuryRigComment(comment *ast.Comment, tag string) bool {
+func isTaggedComment(comment *ast.Comment, tag string) bool {
 	return strings.HasPrefix(strings.TrimSpace(comment.Text), tag)
 }
 

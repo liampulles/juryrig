@@ -95,6 +95,8 @@ type Mapper interface {
 Running go generate will implement the following mapper struct in `zz.mapper.impl.go`:
 
 ```go
+package film
+
 type MapperImpl struct {}
 
 func NewMapperImpl() *MapperImpl

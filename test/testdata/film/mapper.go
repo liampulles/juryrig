@@ -1,4 +1,4 @@
-package example
+package film
 
 //go:generate juryrig gen -o zz.mapper.impl.go
 

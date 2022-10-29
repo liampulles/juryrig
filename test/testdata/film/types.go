@@ -1,4 +1,4 @@
-package example
+package film
 
 type ExternalFilm struct {
 	title   string
@@ -18,5 +18,5 @@ type InternalUserFilm struct {
 	title    string
 	runtime  int
 	director string
-	user     *InternalUser
+	user     InternalUser
 }
